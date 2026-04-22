@@ -198,7 +198,7 @@ class LittleCoderAgent(BaseAgent):
         self,
         model_name: str | None = None,
         allowed_tools: list[str] | None = None,
-        max_turns: int | None = 25,
+        max_turns: int | None = 40,
         verbose: bool = False,
         **kwargs,
     ):
@@ -270,6 +270,15 @@ class LittleCoderAgent(BaseAgent):
                         log_fh.write(f">> {tc['name']}({tc.get('args', {})})\n")
                         preview = (tc.get("result_text", "") or "")[:400]
                         log_fh.write(f"<< {preview}\n")
+                    # Extension notifications: per-turn evidence of
+                    # skill-inject / knowledge-inject / thinking-budget /
+                    # quality-monitor / turn-cap firing. Structured as one
+                    # line per event so tb_status.sh can grep/aggregate.
+                    notes = rpc.notifications() if hasattr(rpc, "notifications") else []
+                    if notes:
+                        log_fh.write(f"\n=== pi notifications ({len(notes)}) ===\n")
+                        for n in notes:
+                            log_fh.write(f"[{n.get('notifyType','info')}] {n.get('message','')}\n")
                     stderr = rpc.stderr()
                     if stderr:
                         log_fh.write(f"\n=== pi stderr ===\n{stderr}\n")

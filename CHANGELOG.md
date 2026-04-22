@@ -2,6 +2,28 @@
 
 All notable changes to little-coder are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and little-coder's public interface (CLI, providers, tools, skills) follows semver starting at `v0.0.1` post-rename.
 
+## [v0.1.4] — 2026-04-23
+
+### Added — extension-activity observability
+Extensions that were previously silent now emit `ctx.ui.notify` events per decision. The RPC client captures them, the TB adapter persists them per-task, and `tb_status.sh` aggregates them. This closes the diagnostic gap surfaced while the first leaderboard run was in flight — specifically, there was no way to confirm that `skill-inject`'s error-recovery priority was actually firing on failed tool calls.
+
+- `skill-inject` — emits `skill-inject: +N [tool,tool,…]` whenever it injects; captures error-recovery vs recency vs intent selection for later analysis.
+- `knowledge-inject` — emits `knowledge-inject: +N [topic,topic,…]` when a knowledge entry scores ≥ threshold and fits the budget.
+- Existing `thinking-budget`, `quality-monitor`, `turn-cap`, `evidence-compact`, `output-parser` notify events were already there, now surfaced in the metrics.
+- `benchmarks/rpc_client.py::PiRpc.notifications()` — new public method returning accumulated notify events.
+- `benchmarks/tb_adapter/little_coder_agent.py` — writes a `=== pi notifications (N) ===` block to each task's `little_coder.log`.
+- `benchmarks/tb_status.sh` — new `── metrics ──` section: tool calls per task (avg/median/min/max), turn-cap hits, tool breakdown, per-extension fire counts. Gracefully prints `N/A` for runs launched against pre-0.1.4 code.
+
+### Changed — Terminal-Bench turn-cap: 25 → 40
+`benchmark_overrides.terminal_bench.max_turns` raised from **25 to 40** in `.pi/settings.json`, and the default `LittleCoderAgent(max_turns=)` kwarg bumped to match.
+
+Empirical basis: the first 10 tasks of the v0.1.1 leaderboard-valid run hit 25 calls in **5/10 cases** — all five were on failed tasks, strongly suggesting the cap (not the model) was the binding constraint. The 2 passes used 15 and 23 turns, both under 25 and well under 40. The new headroom costs nothing on passes and gives failing trajectories room to recover.
+
+### Does not change
+- `gaia` max_turns remains at 30 (different workload, different budget — revisit if GAIA fails similarly).
+- Polyglot has no `max_turns` override (Python runs use pi's default, typically ~50).
+- Tool schemas, protocol, environment-variable names, other benchmark_overrides fields.
+
 ## [v0.1.3] — 2026-04-22
 
 ### Added

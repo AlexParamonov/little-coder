@@ -50,7 +50,7 @@ describe("benchmark-profiles resolution against real settings.json", () => {
     const p = resolveProfile(settings, "llamacpp/qwen3.6-35b-a3b", "terminal_bench");
     expect(p.thinking_budget).toBe(3000);
     expect(p.temperature).toBe(0.2);
-    expect(p.max_turns).toBe(25);
+    expect(p.max_turns).toBe(40);
     // Non-overridden fields fall through from base
     expect(p.context_limit).toBe(32768);
   });

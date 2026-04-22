@@ -84,7 +84,7 @@ function buildBlock(selected: KnowledgeEntry[]): string {
 }
 
 export default function (pi: ExtensionAPI) {
-  pi.on("before_agent_start", async (event) => {
+  pi.on("before_agent_start", async (event, ctx) => {
     loadEntries();
     if (entries.size === 0) return;
 
@@ -133,6 +133,15 @@ export default function (pi: ExtensionAPI) {
     if (block === undefined) {
       block = buildBlock(selected);
       cache.set(key, block);
+    }
+
+    try {
+      ctx.ui.notify(
+        `knowledge-inject: +${selected.length} [${selected.map((e) => e.topic).join(",")}]`,
+        "info",
+      );
+    } catch {
+      // best-effort
     }
 
     return { systemPrompt: base + block };

@@ -131,7 +131,7 @@ export default function (pi: ExtensionAPI) {
     lastFailedTool = isError && typeof name === "string" ? name : null;
   });
 
-  pi.on("before_agent_start", async (event) => {
+  pi.on("before_agent_start", async (event, ctx) => {
     loadSkills();
     if (skills.size === 0) return;
 
@@ -158,6 +158,17 @@ export default function (pi: ExtensionAPI) {
     if (block === undefined) {
       block = buildBlock(selected);
       selectionCache.set(key, block);
+    }
+
+    // Fire-and-forget notify so the benchmark harness can count per-turn
+    // skill injections without having to reconstruct the system prompt.
+    try {
+      ctx.ui.notify(
+        `skill-inject: +${selected.length} [${selected.map((s) => s.targetTool).join(",")}]`,
+        "info",
+      );
+    } catch {
+      // UI unavailable in some run modes — silent best-effort
     }
 
     return { systemPrompt: (event.systemPrompt ?? "") + block };

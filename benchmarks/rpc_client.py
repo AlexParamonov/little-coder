@@ -128,6 +128,10 @@ class PiRpc:
         self._cv = threading.Condition(self._lock)
         self._closed = False
         self._stderr_buf: list[str] = []
+        # ctx.ui.notify messages from extensions — used by the benchmark
+        # harnesses to count skill injections, thinking-budget fires,
+        # quality-monitor corrections etc. Each entry: {"message", "notifyType"}.
+        self._notifications: list[dict] = []
 
         self._reader = threading.Thread(target=self._read_loop, daemon=True)
         self._reader.start()
@@ -199,7 +203,15 @@ class PiRpc:
         elif method == "editor":
             prefill = req.get("prefill", "") or ""
             self._send({"type": "extension_ui_response", "id": rid, "value": prefill})
-        # notify / setStatus / setWidget / setTitle / set_editor_text are fire-and-forget
+        elif method == "notify":
+            # Accumulate for the harness to persist (skill injections,
+            # thinking-budget fires, quality-monitor corrections, etc.).
+            with self._lock:
+                self._notifications.append({
+                    "message": req.get("message", ""),
+                    "notifyType": req.get("notifyType", "info"),
+                })
+        # setStatus / setWidget / setTitle / set_editor_text are fire-and-forget
 
     # ── Send / recv ──────────────────────────────────────────────────────
     def _send(self, obj: dict):
@@ -289,6 +301,17 @@ class PiRpc:
 
     def stderr(self) -> str:
         return "\n".join(self._stderr_buf)
+
+    def notifications(self) -> list[dict]:
+        """Return accumulated ctx.ui.notify events (shallow-copied).
+
+        Each entry: {"message": str, "notifyType": "info"|"warning"|"error"}.
+        Used by the benchmark harness to persist per-task extension activity
+        (skill / knowledge injections, thinking-budget fires, quality-monitor
+        corrections, turn-cap aborts, evidence-compact bridges).
+        """
+        with self._lock:
+            return list(self._notifications)
 
     def close(self, timeout: float = 5):
         if self._closed:
