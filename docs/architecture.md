@@ -1,6 +1,14 @@
 # Architecture Guide
 
-This document is for developers who want to understand, modify, or extend **little-coder**.
+> **Historical note (April 2026).** This document describes the **v0.0.x Python implementation** (Ollama + llama.cpp via a hand-rolled substrate derived from CheetahClaws/ClawSpring). v0.0.5 is the last release that matches this document verbatim — it's preserved at tag [`v0.0.5`](https://github.com/itayinbarr/little-coder/releases/tag/v0.0.5).
+>
+> **v0.1.0 ported the agent onto pi** ([`@mariozechner/pi-coding-agent`](https://github.com/badlogic/pi-mono)). The new architecture is fifteen TypeScript extensions under `.pi/extensions/` plus a Python RPC harness under `benchmarks/`. The plain-English summary is at the top of [`README.md`](../README.md); each extension's source is self-describing. The `CHANGELOG.md` [v0.1.0] section lists every mechanism and its pi-side mapping.
+>
+> The document below is kept as a historical reference — every load-bearing mechanism it describes (Write-vs-Edit invariant, skill injection, knowledge injection, thinking-budget cap, output-parser, quality-monitor, per-model profiles, compaction) is preserved behaviorally in v0.1.0, just expressed as pi extensions instead of Python modules.
+
+---
+
+This document is for developers who want to understand, modify, or extend **little-coder** at the v0.0.x layer.
 For user-facing docs, see [README.md](../README.md). For the research narrative, see [whitepaper.md](whitepaper.md).
 
 ---

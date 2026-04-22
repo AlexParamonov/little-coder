@@ -1,0 +1,28 @@
+{
+  "name": "little-coder",
+  "version": "0.1.0",
+  "description": "A pi-based coding agent optimized for small local language models. Reproduces the whitepaper's scaffold-model-fit adaptations as pi extensions.",
+  "homepage": "https://github.com/itayinbarr/little-coder",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/itayinbarr/little-coder.git"
+  },
+  "license": "Apache-2.0",
+  "author": "Itay Inbar",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "pi": "pi",
+    "test": "vitest run",
+    "test:py": "python3 -m pytest benchmarks/test_rpc_client.py -q",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mariozechner/pi-coding-agent": "^0.68.1",
+    "@sinclair/typebox": "^0.34.49"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

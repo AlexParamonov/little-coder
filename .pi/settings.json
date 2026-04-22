@@ -1,0 +1,55 @@
+{
+  "compaction": { "enabled": true },
+  "retry": { "enabled": true, "maxRetries": 2 },
+  "little_coder": {
+    "default_model_profile": {
+      "context_limit": 32768,
+      "max_tokens": 4096,
+      "thinking_budget": 2048,
+      "skill_token_budget": 300,
+      "knowledge_token_budget": 200,
+      "system_prompt_budget": 0,
+      "max_retries": 1,
+      "temperature": 0.3
+    },
+    "model_profiles": {
+      "llamacpp/qwen3.6-35b-a3b": {
+        "context_limit": 32768,
+        "max_tokens": 4096,
+        "thinking_budget": 2048,
+        "skill_token_budget": 300,
+        "knowledge_token_budget": 200,
+        "temperature": 0.3,
+        "benchmark_overrides": {
+          "terminal_bench": {
+            "thinking_budget": 3000,
+            "temperature": 0.2,
+            "max_turns": 25
+          },
+          "gaia": {
+            "thinking_budget": 2000,
+            "temperature": 0.4,
+            "max_turns": 30,
+            "context_limit": 65536
+          }
+        }
+      },
+      "llamacpp/qwen3.5-9b": {
+        "context_limit": 32768,
+        "max_tokens": 4096,
+        "thinking_budget": 2048,
+        "skill_token_budget": 300,
+        "knowledge_token_budget": 200,
+        "temperature": 0.3
+      },
+      "ollama/qwen3.5": {
+        "context_limit": 32768,
+        "max_tokens": 4096,
+        "thinking_budget": 2048,
+        "skill_token_budget": 300,
+        "knowledge_token_budget": 200,
+        "temperature": 0.3
+      }
+    }
+  }
+}

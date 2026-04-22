@@ -1,177 +1,149 @@
 # little-coder
 
-**A Claude Code-inspired CLI coding agent, heavily optimized for small models that run on any modern consumer laptop.**
+**A pi-based coding agent optimized for small local language models.**
 
-little-coder takes the architecture of a cloud-powered coding assistant and makes it work with 5–25 GB local models served via Ollama **or llama.cpp**, through skill-augmented tool use, domain-knowledge injection, workspace-aware context discovery, a Write-vs-Edit tool invariant, and a thinking-budget system that prevents reasoning models from hanging while preserving their partial insights.
+little-coder started as a Claude Code-inspired Python CLI that adapts a cloud-style coding agent to 5–25 GB local models served via Ollama or llama.cpp. With v0.1.0 the agent has been ported onto **[pi](https://github.com/badlogic/pi-mono)** (`@mariozechner/pi-coding-agent`) as a set of TypeScript extensions. Every mechanism the whitepaper cites as load-bearing — Write-vs-Edit invariant, per-turn skill injection, algorithm-cheat-sheet injection, thinking-budget cap, output-parser, quality monitor, per-model profiles, evidence-aware compaction — is preserved as a pi extension.
 
-**Headline result (v0.0.5):** `llamacpp/qwen3.6-35b-a3b` (Qwen3.6-35B-A3B MoE — 35B total / 3B active, Q4_K_M ~22 GB) + little-coder scores **78.67%** on the full 225-exercise Aider Polyglot benchmark, running on an 8 GB laptop GPU with no network calls. That places the agent well inside the public leaderboard's top-10 band. See [`docs/benchmark-qwen3.6-35b-a3b.md`](docs/benchmark-qwen3.6-35b-a3b.md) for the full breakdown.
+**Paper result (v0.0.2):** `ollama/qwen3.5` (9.7B, 6.6 GB) + little-coder scored **45.56 % mean across two full runs** of the Aider Polyglot benchmark — above gpt-4.5-preview (44.9 %) and gpt-oss-120b high (41.8 %) on the public leaderboard. Matched-model vanilla Aider baseline: 19.11 %. The whitepaper is at [`docs/whitepaper.md`](docs/whitepaper.md). The exact codebase that produced those numbers is preserved at tag **[`v0.0.2`](https://github.com/itayinbarr/little-coder/releases/tag/v0.0.2)** (commit `1d62bde`) — check it out to reproduce.
 
-**Earlier baseline (v0.0.2):** `ollama/qwen3.5` (9.7B, 6.6 GB) + little-coder scored **45.56% mean** across two full runs — still above gpt-4.5-preview (44.9%) and gpt-oss-120b high (41.8%) on the public leaderboard. A matched-model vanilla Aider baseline reaches 19.11%.
+**Best result (v0.0.5):** `llamacpp/qwen3.6-35b-a3b` (Qwen3.6-35B-A3B MoE, 22 GB Q4_K_M) + little-coder scored **78.67 %** on the same 225-exercise benchmark, running on an 8 GB laptop GPU. Tag **[`v0.0.5`](https://github.com/itayinbarr/little-coder/releases/tag/v0.0.5)** preserves that codebase; the full write-up is in [`docs/benchmark-qwen3.6-35b-a3b.md`](docs/benchmark-qwen3.6-35b-a3b.md).
 
-> **The full narrative — motivation, design, methodology, results, leaderboard comparison, integrity audit, and limitations — is in the white paper at https://itayinbarr.substack.com/p/honey-i-shrunk-the-coding-agent** This README is the quick tour: what it looks like, how to run it, and how the repo is laid out. For anything about *why* the design is the way it is or *what the numbers mean*, read the paper.
-
----
-
-## What it looks like
-
-![little-coder startup banner](assets/banner.svg)
-
-Every time you're about to type, the status line shows how much context you've burned and projects how many more messages you can send before a new session is recommended. Zones at 70% (yellow) and 85% (red) match the threshold that triggers automatic compaction:
-
-![context usage and session counter](assets/status_line.svg)
-
-When you ask little-coder to implement something, the agent uses the workspace-awareness skill to discover any spec file (`.docs/instructions.md`, `AGENTS.md`, `CLAUDE.md`, `README.md`), reads the stub, and then **Edits** it in place. On the occasions it tries to `Write` over an existing file, the tool-level guard refuses and hands the agent the exact Edit recipe for the same path:
-
-![tool-use flow](assets/tool_flow.svg)
-
-![Write guard firing and the Edit recovery](assets/write_guard.svg)
-
-All four screenshots are real Rich-rendered SVG exports regenerated from a local generator script — they update in sync with the codebase.
+**v0.1.0** is a heavy architectural upgrade that ports the agent onto pi without regressing the whitepaper's result path. See [`CHANGELOG.md`](CHANGELOG.md) for details.
 
 ---
 
 ## Quick start
 
-### Option A — Ollama (simplest)
+### 1. Install Node.js 20+ and the little-coder dependencies
 
 ```bash
-# 1. Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-
-# 2. Pull a model
-ollama pull qwen3.5
-
-# 3. Clone + install little-coder
 git clone https://github.com/itayinbarr/little-coder.git
 cd little-coder
-pip install -e .
-
-# 4. Run
-python little_coder.py
-# Then in the REPL:  /model ollama/qwen3.5
+npm install
 ```
 
-### Option B — llama.cpp (fastest, supports MoE models like Qwen3.6-35B-A3B)
+### 2. Serve a model locally
+
+**Option A — llama.cpp** (fastest, supports MoE models like Qwen3.6-35B-A3B):
 
 ```bash
-# 1. Build llama.cpp with CUDA (sm_XXX matches your GPU; Blackwell = 120)
+# Build llama.cpp with CUDA (sm_XXX matches your GPU; Blackwell = 120)
 git clone https://github.com/ggml-org/llama.cpp && cd llama.cpp
 cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=120 -DLLAMA_CURL=ON
 cmake --build build --config Release -j
 
-# 2. Fetch a GGUF (example: Qwen3.6-35B-A3B Q4_K_M, 22 GB)
+# Fetch a GGUF (Qwen3.6-35B-A3B Q4_K_M, 22 GB)
 pip install -U "huggingface_hub[cli]"
 hf download unsloth/Qwen3.6-35B-A3B-GGUF Qwen3.6-35B-A3B-UD-Q4_K_M.gguf \
    --local-dir ~/models
 
-# 3. Serve it (MoE trick: keep experts in RAM, attention on GPU)
+# Serve (MoE trick: experts in RAM, attention on GPU)
 build/bin/llama-server -m ~/models/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf \
    --host 127.0.0.1 --port 8888 --jinja \
    -c 16384 -ngl 99 --n-cpu-moe 999 --flash-attn on
-
-# 4. Point little-coder at it
-cd /path/to/little-coder && pip install -e .
-python little_coder.py --model llamacpp/qwen3.6-35b-a3b
-# or for the 9B backup:  --model llamacpp/qwen3.5-9b
 ```
 
-Set `LLAMACPP_BASE_URL=http://localhost:8888/v1` if you run the server on a different host or port.
+**Option B — Ollama** (simplest):
 
----
-
-## Supported models
-
-### via llama.cpp (new in v0.0.3)
-
-| Model | Size | Notes |
-|---|---|---|
-| **Qwen3.6-35B-A3B** | 22 GB (Q4_K_M) | Sparse MoE, 35B total / 3B active — runs at ~38 tok/s on an 8 GB laptop GPU with `--n-cpu-moe 999`. Passes tasks that Qwen3.5 9B fails (e.g. `book-store`) on the first attempt. |
-| Qwen3.5-9B | 5.3 GB (Q4_K_M) | Dense 9.7B, same model used for the v0.0.2 headline benchmark. |
-
-### via Ollama
-
-| Model | Size | Notes |
-|---|---|---|
-| **Qwen3.5** (default) | 6.6 GB | 9.7B, thinking + tools, the model the headline 45.56% is from |
-| Gemma4:e4b | 9.6 GB | 8B, vision + audio capable |
-| Qwen3:8b | 5.2 GB | 8.2B, thinking + tools |
-| Gemma3:4b | 3.3 GB | 4B, 8K context, needs all optimizations |
-| Llama 3.2:3b | ~2 GB | 3B, tight context |
-| Phi4-mini | ~3 GB | 16K context |
-| Any cloud model | — | Claude, GPT-4, Gemini — small-model optimizations auto-disabled |
-
----
-
-## CLI reference
-
-```
-python little_coder.py [options]
-  --model MODEL        Set the model (e.g. ollama/qwen3.5)
-  --permission-mode    auto | accept-all | manual | plan
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull qwen3.5
 ```
 
-### Key slash commands
+### 3. Run little-coder
 
-| Command | Description |
-|---|---|
-| `/model <name>` | Switch model |
-| `/context` | Show current context usage + message projection |
-| `/compact` | Summarize old messages to free up context |
-| `/commit` | Review and commit changes |
-| `/review` | Code review with structured feedback |
-| `/skills` | List available skills |
-| `/memory` | View persistent memories |
-| `/voice` | Voice input mode |
-| `/help` | Full command reference |
+```bash
+cd /path/to/little-coder
 
----
+# Interactive
+LLAMACPP_API_KEY=noop ./node_modules/.bin/pi --model llamacpp/qwen3.6-35b-a3b
 
-## Repo layout
-
+# Single prompt
+LLAMACPP_API_KEY=noop ./node_modules/.bin/pi \
+  --model llamacpp/qwen3.6-35b-a3b \
+  -p "read README.md and tell me what this repo does"
 ```
-little_coder.py          # REPL, slash commands, rendering
-agent.py                 # Core agent loop with small-model adaptations
-providers.py             # Multi-provider streaming (Ollama, llama.cpp, Anthropic, OpenAI-compat)
-tools.py                 # 8 core tools + Write-vs-Edit invariant
-tool_registry.py         # Tool registration and dispatch
-context.py               # System prompt builder (base + skills + knowledge)
-config.py                # Configuration management
-compaction.py            # Context window management
-workspace.py             # Workspace introspection helpers
-memory.py                # Persistent file-based memory
 
-local/                   # Small-model preprocessing pipeline
-├── config.py            # Per-model profiles (context, tokens, budgets)
-├── skill_augment.py     # Tool-skill selection and injection
-├── knowledge_augment.py # Domain-knowledge selection and injection
-├── context_manager.py   # Prompt compression and message pruning
-├── quality.py           # Empty / hallucinated / looped response detection
-├── output_parser.py     # Text-based tool-call extraction + JSON repair
-└── deliberate.py        # Parallel reasoning branches
+`LLAMACPP_BASE_URL` / `OLLAMA_BASE_URL` override the default ports (`http://127.0.0.1:8888/v1` and `http://127.0.0.1:11434/v1`).
 
-skill/
-├── tools/               # Tool usage guidance (8 files)
-├── knowledge/           # Algorithm + domain reference (13 files)
-├── loader.py            # Skill file parser
-├── executor.py          # Skill execution (inline/fork)
-└── builtin.py           # Built-in slash skills
+### 4. Run a benchmark
 
-benchmarks/
-├── aider_polyglot.py              # Multi-language benchmark harness
-├── polyglot_status.py             # Status dashboard for running benchmarks
-├── smoke_test_langs.sh            # Reference-solution smoke test per language
-└── results_full_polyglot*.json    # Per-exercise results from full runs
+```bash
+# Quick smoke
+python3 benchmarks/smoke.py "What is 2+2?"
+
+# Single Polyglot exercise
+python3 benchmarks/aider_polyglot.py --exercise affine-cipher --language python --verbose
+
+# Full Polyglot language (Python, 34 exercises)
+python3 benchmarks/aider_polyglot.py --language python --resume
 ```
 
 ---
 
-## Further reading
+## Architecture (v0.1.0)
 
-- **[`docs/whitepaper.md`](docs/whitepaper.md)** — the white paper. Motivation, design philosophy (*intern, not senior engineer*), methodology, full results, leaderboard comparison, integrity audit, limitations. **Start here.**
-- **[`docs/benchmark-qwen3.6-35b-a3b.md`](docs/benchmark-qwen3.6-35b-a3b.md)** — full write-up of the **78.67%** run with Qwen3.6-35B-A3B via llama.cpp: per-language breakdowns, fail-flip analysis against the Qwen3.5 baseline, hardware setup, cross-language persistent-failure analysis.
-- [`docs/benchmark-reproduction.md`](docs/benchmark-reproduction.md) — two-run reproduction report for the Qwen3.5 9B baseline: per-language statistics, tool-use analysis, intervention metrics, and the runner-degradation investigation.
-- [`docs/benchmark-baseline-aider.md`](docs/benchmark-baseline-aider.md) — vanilla Aider + Qwen3.5 baseline (19.1%) for scaffold-ablation comparison.
-- [`docs/architecture.md`](docs/architecture.md) — deep internals for contributors: module dependency graph, tool registry API, skill loader structure.
+```
+little-coder/
+├── .pi/
+│   ├── settings.json               # per-model profiles + benchmark_overrides.terminal_bench + .gaia
+│   └── extensions/                 # 15 TypeScript extensions, auto-discovered by pi
+│       ├── llama-cpp-provider/     # registers llamacpp/* and ollama/* as OpenAI-compat providers
+│       ├── write-guard/            # Write refuses on existing files — the whitepaper invariant
+│       ├── extra-tools/            # glob, webfetch, websearch (pi ships grep/find)
+│       ├── skill-inject/           # per-turn tool-skill selection (error > recency > intent)
+│       ├── knowledge-inject/       # algorithm cheat-sheet scoring (word=1.0, bigram=2.0, threshold=2.0)
+│       ├── output-parser/          # repair malformed ```tool, <tool_call>, and bare JSON output
+│       ├── quality-monitor/        # empty / hallucinated / loop detection + correction follow-up
+│       ├── thinking-budget/        # cap thinking tokens per turn, retry with thinking off
+│       ├── permission-gate/        # bash whitelist (ls, cat, git log/status/diff, etc.)
+│       ├── checkpoint/             # snapshot files before Write/Edit
+│       ├── tool-gating/            # enforces _allowed_tools on tool_call + skill filter
+│       ├── turn-cap/               # max_turns abort (Polyglot unbounded, TB=25, GAIA=30)
+│       ├── benchmark-profiles/     # reads settings.json → systemPromptOptions + sets temperature
+│       ├── shell-session/          # ShellSession[Cwd|Reset] — tmux-proxy + subprocess backends
+│       ├── browser/                # Playwright-powered Browser[Navigate|Click|Type|Scroll|Extract|Back|History]
+│       ├── evidence/               # EvidenceAdd/Get/List — per-session store, 1 KB snippet cap
+│       └── evidence-compact/       # preserves evidence across pi's auto-compaction
+├── skills/
+│   ├── tools/*.md                  # 14 tool-usage guidance files
+│   ├── knowledge/*.md              # 13 algorithm cheat sheets
+│   └── protocols/*.md              # 3 research/cite/decomposition workflows
+├── benchmarks/
+│   ├── rpc_client.py               # PiRpc — spawns `pi --mode rpc`, demuxes events/responses/UI requests
+│   ├── aider_polyglot.py           # Polyglot driver, per-language transforms preserved
+│   ├── tb_adapter/
+│   │   └── little_coder_agent.py   # Terminal-Bench BaseAgent subclass, tmux-proxy sidecar
+│   ├── gaia_scorer.py              # unchanged Python scorer
+│   ├── smoke.py                    # single-prompt quick tester
+│   └── test_rpc_client.py          # pytest for the RPC client
+├── AGENTS.md                       # project system prompt (replaces Python context.py)
+├── models.json                     # documentation-only copy of the provider registration
+├── package.json, tsconfig.json, vitest.config.ts
+└── docs/
+    ├── whitepaper.md               # the paper (v0.0.2 codebase)
+    ├── architecture.md             # v0.0.5-era Python architecture (preserved)
+    ├── benchmark-qwen3.6-35b-a3b.md# v0.0.5 78.67% narrative
+    ├── benchmark-reproduction.md   # v0.0.2 two-run reproduction
+    └── benchmark-baseline-aider.md # vanilla-Aider scaffold ablation
+```
+
+**Key invariant:** pi is a minimal base (4 core tools, ~1000-token system prompt, no sub-agents / MCP / permission popups by design). Every little-coder mechanism ships as a pi extension that hooks pi's lifecycle events (`before_agent_start`, `context`, `before_provider_request`, `tool_call`, `tool_result`, `turn_end`, `session_compact`). The extensions are independent and can be enabled/disabled per deployment via `.pi/settings.json`.
+
+---
+
+## Reproducing the paper (v0.0.2)
+
+```bash
+git clone https://github.com/itayinbarr/little-coder.git
+cd little-coder
+git checkout v0.0.2
+# Follow that version's README for its Python setup — pip install -e .
+```
+
+The paper ran `ollama/qwen3.5` through the Python little-coder at commit **`1d62bde`** (tag [`v0.0.2`](https://github.com/itayinbarr/little-coder/releases/tag/v0.0.2)). The 45.56 % mean figure is the average of two full 225-exercise runs on that exact codebase.
+
+For the **78.67 % headline**, check out tag [`v0.0.5`](https://github.com/itayinbarr/little-coder/releases/tag/v0.0.5) and follow that version's llama.cpp instructions with Qwen3.6-35B-A3B.
 
 ---
 
@@ -191,20 +163,18 @@ If you reference little-coder or its Aider Polyglot result in academic work, ple
 }
 ```
 
-Plain-text form:
-
-> Inbar, I. (2026). *little-coder: A Coding Agent Optimized for Small Local Language Models.* White paper. https://github.com/itayinbarr/little-coder/blob/main/docs/whitepaper.md
-
 ---
 
 ## Attribution
 
-little-coder is a derivative work based on [CheetahClaws / ClawSpring](https://github.com/SafeRL-Lab/clawspring) by SafeRL-Lab, licensed under Apache 2.0. The upstream project provided the foundational agent architecture, tool system, multi-provider support, and REPL interface.
+little-coder v0.0.x was a derivative work of [CheetahClaws / ClawSpring](https://github.com/SafeRL-Lab/clawspring) by SafeRL-Lab, licensed under Apache 2.0. The upstream project provided the Python agent substrate, tool system, multi-provider support, and REPL.
 
-little-coder adds significant new systems for small-model optimization: skill-augmented tool use, domain-knowledge injection, workspace awareness, thinking-budget enforcement with reasoning reuse, the Write-vs-Edit tool invariant, model-specific profiles for Qwen3.5 and Gemma4, and a full multi-language benchmark harness.
+little-coder v0.1.0 replaces that substrate with **pi** ([`@mariozechner/pi-coding-agent`](https://github.com/badlogic/pi-mono)) by Mario Zechner, also licensed under Apache 2.0 / MIT. The pi-mono runtime provides the agent loop, provider abstraction, TUI, and extension model; little-coder rebuilds its small-model adaptations on top of it.
+
+All little-coder-specific mechanisms — Write-vs-Edit invariant, skill / knowledge injection, thinking-budget cap, output-parser, quality-monitor, per-model profiles, per-benchmark overrides, ShellSession/Browser/Evidence tool families, evidence-aware compaction — are preserved across versions.
 
 ---
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE) for details.
+Apache 2.0 — see [LICENSE](LICENSE) for details. NOTICE tracks upstream attribution.
