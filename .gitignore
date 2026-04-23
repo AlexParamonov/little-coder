@@ -8,6 +8,7 @@ node_modules/
 
 # Benchmark run artifacts
 benchmarks/tb_runs/
+benchmarks/harbor_runs/
 benchmarks/results_*.json
 benchmarks/results_*.json.tmp
 benchmarks/full_polyglot_logs/

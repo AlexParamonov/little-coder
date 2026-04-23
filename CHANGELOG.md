@@ -2,6 +2,11 @@
 
 All notable changes to little-coder are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and little-coder's public interface (CLI, providers, tools, skills) follows semver starting at `v0.0.1` post-rename.
 
+## [v0.1.8] — 2026-04-23
+
+### Fixed
+- **`benchmarks/harbor_runs/` is now gitignored.** v0.1.7's commit accidentally included ~50 KB of fix-git pilot output (configs, verifier outputs, reward files). Removed from tracking, added to `.gitignore` alongside the existing `benchmarks/tb_runs/` entry. No user-visible runtime behavior change.
+
 ## [v0.1.7] — 2026-04-23
 
 ### Fixed
