@@ -2,6 +2,25 @@
 
 All notable changes to little-coder are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and little-coder's public interface (CLI, providers, tools, skills) follows semver starting at `v0.0.1` post-rename.
 
+## [v0.1.5] — 2026-04-23
+
+### Added — Terminal-Bench-Core v0.1.1 result documentation
+- **little-coder on Terminal-Bench scored 32 / 80 = 40.0 %** on the full leaderboard-valid `terminal-bench-core@0.1.1` set. Single attempt per task, 6 h 50 min wall clock on an 8 GB RTX 5070 Laptop GPU.
+- Run ID `leaderboard-2026-04-23__00-14-03`, executed with [`v0.1.4`](https://github.com/itayinbarr/little-coder/releases/tag/v0.1.4) commit `f4c1b4e`.
+- Full write-up with passed/failed task breakdown, turn-cap analysis, extension-activity telemetry, thinking-budget correlation, and v0.2 levers: [`docs/benchmark-terminal-bench-v0.1.1.md`](docs/benchmark-terminal-bench-v0.1.1.md).
+- README headline section now lists the TB result alongside the Polyglot headlines.
+
+### Key empirical findings from the run
+- The v0.1.4 `max_turns` bump (25 → 40) was empirically correct: cap-hits dropped from ~20 / 80 (projected at 25) to **8 / 80** at 40, and the 72 non-cap tasks passed at **43 %**.
+- `skill-inject` fires on 71 / 80 tasks (first runtime-verified evidence that the error-recovery / recency / intent selection is actively engaging per turn — previously silent pre-v0.1.4).
+- `thinking-budget` caps fired on 11 tasks — **all 11 failed**. Either selection bias (hard tasks think more, also fail more) or the 3000-token cap is cutting productive reasoning. The v0.2 experiment is to bump TB `thinking_budget` to 5000 and re-run.
+- Quality-monitor corrections fired 57 times across 28 tasks, but none of the top-10-most-corrected tasks passed. On TB's long-horizon container debugging, mid-trajectory recovery is harder than on Polyglot.
+
+### Known diagnostic gaps (for v0.2)
+- `AgentResult.total_input_tokens` / `total_output_tokens` come through as `0` — the TB adapter doesn't forward pi-ai's usage reports. Cosmetic for leaderboard display but worth fixing.
+- 12 failures were `agent_timeout` (harness wall clock), not `unset` (wrong answer) — these are tasks where turn count is fine but each turn is slow.
+- `blind-maze-explorer-algorithm.*` (all three variants) failed despite passing the simpler `blind-maze-explorer-5x5` — candidate for a maze-search knowledge entry.
+
 ## [v0.1.4] — 2026-04-23
 
 ### Added — extension-activity observability
