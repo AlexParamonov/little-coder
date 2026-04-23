@@ -2,6 +2,28 @@
 
 All notable changes to little-coder are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and little-coder's public interface (CLI, providers, tools, skills) follows semver starting at `v0.0.1` post-rename.
 
+## [v0.1.6] — 2026-04-23
+
+### Added — Terminal-Bench 2.0 (harbor) adapter
+little-coder can now run on the new **`terminal-bench@2.0`** dataset (89 tasks) via [harbor](https://github.com/laude-institute/harbor), the framework that replaced the `tb` CLI for TB 2.0. The TB 1.0 adapter (under `benchmarks/tb_adapter/`) is unchanged — it continues to target `terminal-bench-core@0.1.1` and remains the canonical path for the current leaderboard submission.
+
+- **`benchmarks/harbor_adapter/little_coder_agent.py`** — subclasses `harbor.agents.base.BaseAgent`. Implements `name()`, `version()`, `setup()`, and async `run(instruction, environment, context)`. Reuses `benchmarks/rpc_client.py::PiRpc` verbatim — the only novelty is the ShellSession proxy:
+  - TB 1.0 proxied `ShellSession` calls to `TmuxSession.send_keys(...)` (sync, pane-parsing).
+  - TB 2.0 proxies to harbor's `BaseEnvironment.exec(...)` (async, stdout/stderr/return_code).
+  - A new `_HarborShellProxy` class bridges PiRpc's sync reader-thread callback to the async `env.exec` via `asyncio.run_coroutine_threadsafe()` against the loop stashed in `run()`.
+  - Stateful-cwd semantics matched by appending `pwd` to each invocation and tracking the result for the next call's `cd <cwd>` prefix.
+- **`benchmarks/harbor_pilot.sh`** — pilot launcher (one or more task ids). Mirrors the shape of `tb_pilot.sh` but calls `harbor run --dataset terminal-bench@2.0 --agent-import-path ... --model ...`.
+- README headline lists the TB 2.0 readiness alongside TB 1.0's 40 % result.
+
+### Dataset & install notes (not committed, local-only)
+- Install harbor: `uv tool install harbor` (binary ends up at `~/.local/bin/harbor`; version tested: 0.4.0).
+- Download TB 2.0 tasks locally for inspection: `harbor dataset download terminal-bench@2.0` — 89 tasks, different layout from TB 1.0 (`task.toml` + `instruction.md` + `environment/` + `tests/` per task; no `.docs/instructions.md`). The download landed at `/home/itay-inbar/Documents/terminal-bench-2.0-tasks/` in my local setup.
+- Task set is substantively different from v0.1.1 — no `hello-world`, new families (DNA assembly, compiler verification, kernel debugging, cobol-modernization, feal-cryptanalysis). Pilot-suitable easy candidates will emerge from the first runs.
+
+### Pending before a submission run
+- Empirical pilot on 3–5 TB 2.0 tasks to validate the async-exec proxy + cwd tracking under real tasks.
+- Leaderboard submission URL / process for TB 2.0 (harbor docs don't yet specify — may differ from the TB 1.0 email-based path).
+
 ## [v0.1.5] — 2026-04-23
 
 ### Added — Terminal-Bench-Core v0.1.1 result documentation

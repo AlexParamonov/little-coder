@@ -10,6 +10,8 @@ little-coder started as a Claude Code-inspired Python CLI that adapts a cloud-st
 
 **Terminal-Bench result (v0.1.4):** same model, same hardware, different benchmark — on the full leaderboard-valid [`terminal-bench-core@0.1.1`](https://www.tbench.ai/docs/submitting-to-leaderboard) set (80 tasks), little-coder scored **32 / 80 = 40.0 %** in 6 h 50 min. Run details and per-task breakdown in [`docs/benchmark-terminal-bench-v0.1.1.md`](docs/benchmark-terminal-bench-v0.1.1.md). Results JSON at `benchmarks/tb_runs/leaderboard-2026-04-23__00-14-03/results.json` (local).
 
+**Terminal-Bench 2.0 ready (v0.1.6):** adapter for the [harbor](https://github.com/laude-institute/harbor) framework lives at `benchmarks/harbor_adapter/little_coder_agent.py`, subclassing `harbor.agents.base.BaseAgent` and proxying ShellSession through harbor's async `BaseEnvironment.exec()` instead of TB 1.0's `TmuxSession.send_keys()`. The 89-task `terminal-bench@2.0` dataset is the successor to the v0.1.1 leaderboard set. Pilot launcher: `benchmarks/harbor_pilot.sh <task-id>`.
+
 **v0.1.0** is a heavy architectural upgrade that ports the agent onto pi without regressing the whitepaper's result path. See [`CHANGELOG.md`](CHANGELOG.md) for details.
 
 ---

@@ -24,7 +24,7 @@
           "terminal_bench": {
             "thinking_budget": 3000,
             "temperature": 0.2,
-            "max_turns": 25
+            "max_turns": 40
           },
           "gaia": {
             "thinking_budget": 2000,
